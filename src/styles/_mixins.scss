@@ -1,23 +1,12 @@
-@mixin background-cover($position) {
-    background-position: $position;
-    background-repeat: no-repeat;
-    background-size: cover;
-}
+// This mixin is used to provide a fallback for `max()` function in older browsers
+// (e.g. Chrome 76 that is found in devices like Samsung 2021 TVs). The mixin ensures
+// a default value is applied to a property while using `max()` only if supported.
+@mixin conditional-max($property, $default, $max-value) {
+    & {
+        #{$property}: $default;
+    }
 
-@mixin circle($size) {
-    @include square($size);
-    border-radius: 100%;
-}
-
-@mixin position($position, $top: null, $right: null, $bottom: null, $left: null) {
-    position: $position;
-    top: $top;
-    right: $right;
-    bottom: $bottom;
-    left: $left;
-}
-
-@mixin square($size) {
-    height: $size;
-    width: $size;
+    @supports (width: max(1px, 1px)) {
+        #{$property}: max($max-value, $default);
+    }
 }

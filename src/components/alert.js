@@ -1,42 +1,34 @@
-
+import { appRouter } from './router/appRouter';
 import browser from '../scripts/browser';
 import dialog from './dialog/dialog';
-import globalize from '../scripts/globalize';
+import globalize from '../lib/globalize';
 
-/* eslint-disable indent */
+export default async function (text, title) {
+    // Modals seem to be blocked on Web OS and Tizen 2.x
+    const canUseNativeAlert = !!(
+        !browser.web0s
+        && !(browser.tizenVersion && (browser.tizenVersion < 3 || browser.tizenVersion >= 8))
+        && browser.tv
+        && window.alert
+    );
 
-    function replaceAll(originalString, strReplace, strWith) {
-        const reg = new RegExp(strReplace, 'ig');
-        return originalString.replace(reg, strWith);
-    }
+    const options = typeof text === 'string' ? { title, text } : text;
 
-    export default function (text, title) {
-        let options;
-        if (typeof text === 'string') {
-            options = {
-                title: title,
-                text: text
-            };
-        } else {
-            options = text;
-        }
+    await appRouter.ready();
 
-        if (browser.tv && window.alert) {
-            alert(replaceAll(options.text || '', '<br/>', '\n'));
-        } else {
-            const items = [];
-
-            items.push({
-                name: globalize.translate('ButtonGotIt'),
-                id: 'ok',
-                type: 'submit'
-            });
-
-            options.buttons = items;
-            return dialog.show(options);
-        }
+    if (canUseNativeAlert) {
+        alert((options.text || '').replaceAll('<br/>', '\n'));
 
         return Promise.resolve();
     }
 
-/* eslint-enable indent */
+    options.buttons = [
+        {
+            name: globalize.translate('ButtonGotIt'),
+            id: 'ok',
+            type: 'submit'
+        }
+    ];
+
+    return dialog.show(options);
+}

@@ -1,6 +1,6 @@
 import actionsheet from '../actionSheet/actionSheet';
 import { playbackManager } from '../playback/playbackmanager';
-import globalize from '../../scripts/globalize';
+import globalize from '../../lib/globalize';
 import qualityoptions from '../qualityOptions';
 import ServerConnections from '../ServerConnections';
 
@@ -8,14 +8,15 @@ function showQualityMenu(player, btn) {
     const videoStream = playbackManager.currentMediaSource(player).MediaStreams.filter(function (stream) {
         return stream.Type === 'Video';
     })[0];
-    const videoWidth = videoStream ? videoStream.Width : null;
-    const videoHeight = videoStream ? videoStream.Height : null;
+
+    const videoCodec = videoStream ? videoStream.Codec : null;
+    const videoBitRate = videoStream ? videoStream.BitRate : null;
 
     const options = qualityoptions.getVideoQualityOptions({
         currentMaxBitrate: playbackManager.getMaxStreamingBitrate(player),
         isAutomaticBitrateEnabled: playbackManager.enableAutomaticBitrateDetection(player),
-        videoWidth: videoWidth,
-        videoHeight: videoHeight,
+        videoCodec,
+        videoBitRate,
         enableAuto: true
     });
 
@@ -41,13 +42,12 @@ function showQualityMenu(player, btn) {
 
     return actionsheet.show({
         items: menuItems,
-        positionTo: btn,
-        enableHistory: false
+        positionTo: btn
     }).then(function (id) {
-        const bitrate = parseInt(id);
+        const bitrate = parseInt(id, 10);
         if (bitrate !== selectedBitrate) {
             playbackManager.setMaxStreamingBitrate({
-                enableAutomaticBitrateDetection: bitrate ? false : true,
+                enableAutomaticBitrateDetection: !bitrate,
                 maxBitrate: bitrate
             }, player);
         }
@@ -78,8 +78,7 @@ function showRepeatModeMenu(player, btn) {
 
     return actionsheet.show({
         items: menuItems,
-        positionTo: btn,
-        enableHistory: false
+        positionTo: btn
     }).then(function (mode) {
         if (mode) {
             playbackManager.setRepeatMode(mode, player);
@@ -140,8 +139,7 @@ function showAspectRatioMenu(player, btn) {
 
     return actionsheet.show({
         items: menuItems,
-        positionTo: btn,
-        enableHistory: false
+        positionTo: btn
     }).then(function (id) {
         if (id) {
             playbackManager.setAspectRatio(id, player);
@@ -163,8 +161,7 @@ function showPlaybackRateMenu(player, btn) {
 
     return actionsheet.show({
         items: menuItems,
-        positionTo: btn,
-        enableHistory: false
+        positionTo: btn
     }).then(function (id) {
         if (id) {
             playbackManager.setPlaybackRate(id, player);
@@ -203,7 +200,8 @@ function showWithUser(options, player, user) {
         });
     }
 
-    if (user && user.Policy.EnableVideoPlaybackTranscoding) {
+    if (options.quality && supportedCommands.includes('SetMaxStreamingBitrate')
+            && user?.Policy?.EnableVideoPlaybackTranscoding) {
         const secondaryQualityText = getQualitySecondaryText(player);
 
         menuItems.push({
@@ -241,8 +239,7 @@ function showWithUser(options, player, user) {
 
     return actionsheet.show({
         items: menuItems,
-        positionTo: options.positionTo,
-        enableHistory: false
+        positionTo: options.positionTo
     }).then(function (id) {
         return handleSelectedOption(id, options, player);
     });
@@ -252,7 +249,7 @@ export function show(options) {
     const player = options.player;
     const currentItem = playbackManager.currentItem(player);
 
-    if (!currentItem || !currentItem.ServerId) {
+    if (!currentItem?.ServerId) {
         return showWithUser(options, player, null);
     }
 

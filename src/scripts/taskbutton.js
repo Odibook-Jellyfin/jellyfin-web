@@ -1,11 +1,12 @@
 
-import { Events } from 'jellyfin-apiclient';
 import serverNotifications from '../scripts/serverNotifications';
-import globalize from '../scripts/globalize';
-import '../elements/emby-button/emby-button';
+import globalize from '../lib/globalize';
 import ServerConnections from '../components/ServerConnections';
+import Events from '../utils/events.ts';
 
-export default function (options) {
+import '../elements/emby-button/emby-button';
+
+function taskbutton(options) {
     function pollTasks() {
         ServerConnections.getApiClient(serverId).getScheduledTasks({
             IsEnabled: true
@@ -120,3 +121,5 @@ export default function (options) {
         Events.on(serverNotifications, 'ScheduledTasksInfo', onScheduledTasksUpdate);
     }
 }
+
+export default taskbutton;

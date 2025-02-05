@@ -1,16 +1,17 @@
 import ServerConnections from '../../components/ServerConnections';
+import { PluginType } from '../../types/plugin.ts';
 
 export default class PhotoPlayer {
     constructor() {
         this.name = 'Photo Player';
-        this.type = 'mediaplayer';
+        this.type = PluginType.MediaPlayer;
         this.id = 'photoplayer';
         this.priority = 1;
     }
 
     play(options) {
         return new Promise(function (resolve) {
-            import('../../components/slideshow/slideshow').then(({default: Slideshow}) => {
+            import('../../components/slideshow/slideshow').then(({ default: Slideshow }) => {
                 const index = options.startIndex || 0;
 
                 const apiClient = ServerConnections.currentApiClient();
@@ -22,6 +23,8 @@ export default class PhotoPlayer {
                         startIndex: index,
                         interval: 11000,
                         interactive: true,
+                        // playbackManager.shuffle has no options. So treat 'shuffle' as a 'play' action
+                        autoplay: options.autoplay || options.shuffle,
                         user: result
                     });
 

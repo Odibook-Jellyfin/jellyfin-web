@@ -1,33 +1,23 @@
-import layoutManager from '../../components/layoutManager';
-import * as userSettings from '../../scripts/settings/userSettings';
-import inputManager from '../../scripts/inputManager';
-import loading from '../../components/loading/loading';
-import globalize from '../../scripts/globalize';
-import * as mainTabsManager from '../../components/maintabsmanager';
-import cardBuilder from '../../components/cardbuilder/cardBuilder';
-import imageLoader from '../../components/images/imageLoader';
-import '../../assets/css/scrollstyles.scss';
-import '../../elements/emby-itemscontainer/emby-itemscontainer';
-import '../../elements/emby-tabs/emby-tabs';
-import '../../elements/emby-button/emby-button';
-import Dashboard from '../../scripts/clientUtils';
+import cardBuilder from 'components/cardbuilder/cardBuilder';
+import imageLoader from 'components/images/imageLoader';
+import layoutManager from 'components/layoutManager';
+import loading from 'components/loading/loading';
+import * as mainTabsManager from 'components/maintabsmanager';
+import globalize from 'lib/globalize';
+import inputManager from 'scripts/inputManager';
+import * as userSettings from 'scripts/settings/userSettings';
+import { LibraryTab } from 'types/libraryTab';
+import Dashboard from 'utils/dashboard';
+import { getBackdropShape, getPortraitShape } from 'utils/card';
+
+import 'elements/emby-itemscontainer/emby-itemscontainer';
+import 'elements/emby-tabs/emby-tabs';
+import 'elements/emby-button/emby-button';
+
+import 'styles/scrollstyles.scss';
 
 function enableScrollX() {
     return !layoutManager.desktop;
-}
-
-function getBackdropShape() {
-    if (enableScrollX()) {
-        return 'overflowBackdrop';
-    }
-    return 'backdrop';
-}
-
-function getPortraitShape() {
-    if (enableScrollX()) {
-        return 'overflowPortrait';
-    }
-    return 'portrait';
 }
 
 function getLimit() {
@@ -61,7 +51,7 @@ function loadRecommendedPrograms(page) {
         });
         loading.hide();
 
-        import('../../components/autoFocuser').then(({default: autoFocuser}) => {
+        import('../../components/autoFocuser').then(({ default: autoFocuser }) => {
             autoFocuser.autoFocus(page);
         });
     });
@@ -95,7 +85,7 @@ function reload(page, enableFullRender) {
             EnableImageTypes: 'Primary,Thumb'
         }).then(function (result) {
             renderItems(page, result.Items, 'upcomingTvMovieItems', null, {
-                shape: getPortraitShape(),
+                shape: getPortraitShape(enableScrollX()),
                 preferThumb: null,
                 showParentTitle: false
             });
@@ -146,7 +136,7 @@ function renderItems(page, items, sectionClass, overlayButton, cardOptions) {
         preferThumb: 'auto',
         inheritThumb: false,
         shape: enableScrollX() ? 'autooverflow' : 'auto',
-        defaultShape: getBackdropShape(),
+        defaultShape: getBackdropShape(enableScrollX()),
         showParentTitle: true,
         showTitle: true,
         centerText: true,
@@ -200,11 +190,20 @@ function setScrollClasses(elem, scrollX) {
 }
 
 function getDefaultTabIndex(folderId) {
-    if (userSettings.get('landing-' + folderId) === 'guide') {
-        return 1;
+    switch (userSettings.get('landing-' + folderId)) {
+        case LibraryTab.Guide:
+            return 1;
+        case LibraryTab.Channels:
+            return 2;
+        case LibraryTab.Recordings:
+            return 3;
+        case LibraryTab.Schedule:
+            return 4;
+        case LibraryTab.SeriesTimers:
+            return 5;
+        default:
+            return 0;
     }
-
-    return 0;
 }
 
 export default function (view, params) {
@@ -213,17 +212,17 @@ export default function (view, params) {
     }
 
     function onBeforeTabChange(evt) {
-        preLoadTab(view, parseInt(evt.detail.selectedTabIndex));
+        preLoadTab(view, parseInt(evt.detail.selectedTabIndex, 10));
     }
 
     function onTabChange(evt) {
-        const previousTabController = tabControllers[parseInt(evt.detail.previousIndex)];
+        const previousTabController = tabControllers[parseInt(evt.detail.previousIndex, 10)];
 
-        if (previousTabController && previousTabController.onHide) {
+        if (previousTabController?.onHide) {
             previousTabController.onHide();
         }
 
-        loadTab(view, parseInt(evt.detail.selectedTabIndex));
+        loadTab(view, parseInt(evt.detail.selectedTabIndex, 10));
     }
 
     function getTabContainers() {
@@ -264,7 +263,7 @@ export default function (view, params) {
                 break;
         }
 
-        import(`../livetv/${depends}`).then(({default: controllerFactory}) => {
+        import(`../livetv/${depends}`).then(({ default: ControllerFactory }) => {
             let tabContent;
 
             if (index === 0) {
@@ -279,12 +278,8 @@ export default function (view, params) {
 
                 if (index === 0) {
                     controller = self;
-                } else if (index === 6) {
-                    controller = new controllerFactory(view, tabContent, {
-                        collectionType: 'livetv'
-                    });
                 } else {
-                    controller = new controllerFactory(view, params, tabContent);
+                    controller = new ControllerFactory(view, params, tabContent);
                 }
 
                 tabControllers[index] = controller;
@@ -334,7 +329,7 @@ export default function (view, params) {
 
     let isViewRestored;
     const self = this;
-    let currentTabIndex = parseInt(params.tab || getDefaultTabIndex('livetv'));
+    let currentTabIndex = parseInt(params.tab || getDefaultTabIndex('livetv'), 10);
     let initialTabIndex = currentTabIndex;
     let lastFullRender = 0;
     [].forEach.call(view.querySelectorAll('.sectionTitleTextButton-programs'), function (link) {
@@ -382,7 +377,7 @@ export default function (view, params) {
         inputManager.on(window, onInputCommand);
     });
     view.addEventListener('viewbeforehide', function () {
-        if (currentTabController && currentTabController.onHide) {
+        if (currentTabController?.onHide) {
             currentTabController.onHide();
         }
 

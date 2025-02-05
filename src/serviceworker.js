@@ -1,13 +1,5 @@
 /* eslint-env serviceworker */
 
-/* eslint-disable import/namespace,import/named */
-import { skipWaiting, clientsClaim } from 'workbox-core';
-import { precacheAndRoute } from 'workbox-precaching';
-/* eslint-enable import/namespace,import/named */
-
-skipWaiting();
-clientsClaim();
-
 function getApiClient(serverId) {
     return Promise.resolve(window.connectionManager.getApiClient(serverId));
 }
@@ -44,10 +36,5 @@ self.addEventListener('notificationclick', function (event) {
     event.waitUntil(executeAction(action, data, serverId));
 }, false);
 
-// Do not precache files in development so live reload works as expected
-/* eslint-disable-next-line no-undef -- NODE_ENV is replaced by webpack */
-if (process.env.NODE_ENV === 'production') {
-    // this is needed by the webpack Workbox plugin
-    /* eslint-disable-next-line no-restricted-globals,no-undef */
-    precacheAndRoute(self.__WB_MANIFEST);
-}
+/* eslint-disable-next-line no-restricted-globals -- self is valid in a serviceworker environment */
+self.addEventListener('activate', () => self.clients.claim());
